@@ -1,14 +1,22 @@
-function [ hog ] = train( data )
-%WAIR Summary of this function goes here
-%   Detailed explanation goes here
-N = size(data, 1);
-cell_size = 4;
-image_size = 32;
-hog_size = image_size / cell_size * image_size / cell_size * 36;
-hog = zeros(N, hog_size);
-for n = 1 : N
-    hog_tmp = vl_hog(im2single(reshape(data(n,:), 32, 32, 3)), cell_size, 'variant', 'dalaltriggs', 'BilinearOrientations');
-    hog(n,:) = reshape(hog_tmp, 1, hog_size);
-end
+function [ model ] = train( X, Y )
+    %Output the model given the data input
+    %   Train a model using the data based on the classifier seleted
+
+    %%%%% start training %%%%%
+    type = 'SVM';
+    %type = 'NN';
+    %type = 'LR';
+    Y = double(Y);
+    switch type
+        case 'SVM'
+            model = train_svm(X, Y);
+        case 'NN'
+
+        case 'LR'
+
+        otherwise
+            error('Unexpected classifier type. Exiting.');
+    end
+    %%%%% end training %%%%%
 end
 
