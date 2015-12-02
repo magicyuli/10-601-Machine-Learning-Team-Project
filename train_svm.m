@@ -1,57 +1,84 @@
-function [ model ] = train_svm( X, Y )
+function [ Model ] = train_svm( X, Y )
 % HYPER PARAMS: C, k(x,y).
 
+    KERNELIZED = true;
+    TRANI_PROPORTION = 1.0;
+    CLZ_NUM = 10;
+
     [N, M] = size(X);
-    train_size = N * 0.75;
+    train_size = N * TRANI_PROPORTION;
     
-    % TODO multi-class
-    Y(Y ~= 0) = -1;
-    Y(Y == 0) = 1;
+    % only 1 and -1
+    y_binary = repmat(Y, 1, CLZ_NUM);
+    
+    for i = 1:CLZ_NUM
+        indexes = y_binary(:, i) == i - 1;
+        y_binary(indexes, i) = 1;
+        y_binary(indexes == 0, i) = -1;
+    end
     
     % train set
     x_train = X(1:train_size,:);
-    y_train = Y(1:train_size,:);
-    % validation set
-    x_val = X(train_size + 1:N,:);
-    y_val = Y(train_size + 1:N,:);
+    y_train = y_binary(1:train_size,:);
+    if TRANI_PROPORTION < 1.0
+        % validation set
+        x_val = X(train_size + 1:N,:);
+        y_val = Y(train_size + 1:N,:);
+    end
     
     hog = extract_hog(x_train);
     
+    %PCA
+%     [coeff,score] = pca(hog, 'Algorithm', 'eig', 'NumComponents', 900);
+    [coeff,score] = pca_wairi(hog, 900);
+    hog = score;
     
-    %%%%%%%%%%%%%%%%% no kernel %%%%%%%%%%%%%%%%%
-    C = 100;
+    % compute the [dot(x_i, x_j) * y_i * y_j] matrix (n by n)
+    H = zeros(train_size, train_size, CLZ_NUM);
     
-    H = (y_train * y_train') .* (hog * hog');
+    if KERNELIZED
+        A = kernel(hog, hog);
+    else
+        A = hog * hog';
+    end
+    
+    for  i = 1:CLZ_NUM
+        H(:, :, i) = (y_train(:, i) * y_train(:, i)') .* A;
+    end
+    
     f = -1 * ones(train_size, 1);
     lb = zeros(train_size, 1);
     
     % best model based on f score
-    f_max = 0;
-    c_max = 1;
-    f_plot = zeros(C, 1);
-    p_plot = zeros(C, 1);
-    r_plot = zeros(C, 1);
-    c_plot = zeros(C, 1);
-    for c = 1:C
+    accu_max = 0;
+    
+    % init alpha
+    a = zeros(train_size, CLZ_NUM);
+    % init biase
+    b = zeros(1, CLZ_NUM);
+    
+    min_c = 100;
+    max_c = 100;
+    for c = min_c:max_c
         ub = c * ones(train_size, 1);
-        [a, fval, exitflag] = quadprog(H, f, [], [], [], [], lb, ub);
-        b = sum(a .* y_train) / sum(a > 0);
-        m = struct('a', a, 'b', b, 'X', hog, 'Y', y_train);
-        % cross-validation
-        y_pre = predict_svm(m, x_val);
-        [f_s, p, r] = f_score(y_val, y_pre);
-        if f_s > f_max
-            f_max = f_s;
-            c_max = c;
-            model = m;
+        for  i = 1:CLZ_NUM
+            fprintf('clz %d\n', i);
+            a(:, i) = quadprog(H(:, :, i), f, [], [], [], [], lb, ub);
+            b(i) = sum(a(:, i) .* y_train(:, i)) / sum(a(:, i) > 0);
         end
-        f_plot(c) = f_s;
-        p_plot(c) = p;
-        r_plot(c) = r;
-        c_plot(c) = c;
-        fprintf('c: %d, pre: %f, rec: %f, f: %f', c, p, r, f_s);
+        m = struct('a', a, 'b', b, 'X', hog, 'Y', y_train, 'coeff', coeff);
+        if TRANI_PROPORTION < 1.0
+            % cross-validation
+            y_pre = predict_svm(m, x_val);
+            accu = sum(y_val == y_pre) / size(y_pre, 1);
+            fprintf('c: %d, accuracy: %f\n', c, accu);
+            if accu_max < accu
+                Model = m;
+            end
+        else
+            Model = m;
+        end
     end
-    fprintf('c max: %d, f_max: %f', c_max, f_max);
-    plot(c_plot, f_plot, c_plot, p_plot, c_plot, r_plot);
-    legend('c', 'f', 'p', 'r');
+
+    save('model_svm.mat', 'Model');
 end

@@ -6,6 +6,7 @@ function [ model ] = train( X, Y )
     type = 'SVM';
     %type = 'NN';
     %type = 'LR';
+
     Y = double(Y);
     switch type
         case 'SVM'
@@ -17,6 +18,6 @@ function [ model ] = train( X, Y )
         otherwise
             error('Unexpected classifier type. Exiting.');
     end
-    %%%%% end training %%%%%
+
 end
 
