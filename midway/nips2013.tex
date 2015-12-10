@@ -1,16 +1,20 @@
 \documentclass{article} % For LaTeX2e
-%\usepackage{nips13submit_e,times}
+\usepackage{nips13submit_e,times}
 %\usepackage{hyperref}
 \usepackage{url}
+\usepackage{graphicx}
 %\documentstyle[nips13submit_09,times,art10]{article} % For LaTeX 2.09
+%\usepackage{authblk}
 
 \title{10-601B Group Project Midway Report}
 
 \author{
 Liruoyang, Yu\\
+MISM\\
 \texttt{magicyuli@cmu.edu}
 \and
 Yilong, Chang\\
+MISM\\
 \texttt{yilongc@andrew.cmu.edu}
 }
 
@@ -35,266 +39,174 @@ This report summarizes the halfway results of the 10-601B image classification g
 \end{abstract}
 
 \section{Introduction}
+Up to this point, we trained and tested two classifiers, SVM and Neural Network. The dataset we used for training is a subset of 5000 images from CIFAR-10. We used VLFeat to extract HoG from images and then feed the extracted features to our classifiers.
 
-Up to this point, we trained and tested two classifiers, SVM and Neural Network. The dataset we used is a subset of 5000 images from the CIFAR-10.
+We achieved 60\% and 50\% accuracy on Autolab test using SVM and Neutral Network respectively.
 
 \subsection{Motivation}
 
+There are three reasons why we chose SVM. First is that image data is usually not linearly separable in the original feature space, and kernel SVM can deal with this kind of dataset pretty well. Second, the training of SVM is a convex optimization problem, which made it efficient to train. Three, SVM has relatively higher resistance to over-fitting because of the maximization of the margin. And it's easy to adjust C to avoid over-fitting.
+
+On the other hand, Neural Network is a non-paramateric model and therefore, is easy to use and understand.
+
 \subsection{Background and Related Work}
 
-The style files for NIPS and other conference information are available on the World Wide Web at
-\begin{center}
-   \url{http://www.nips.cc/}
-\end{center}
-The file \verb+nips2013.pdf+ contains these 
-instructions and illustrates the
-various formatting requirements your NIPS paper must satisfy. \LaTeX{}
-users can choose between two style files:
-\verb+nips11submit_09.sty+ (to be used with \LaTeX{} version 2.09) and
-\verb+nips11submit_e.sty+ (to be used with \LaTeX{}2e). The file
-\verb+nips2013.tex+ may be used as a ``shell'' for writing your paper. All you
-have to do is replace the author, title, abstract, and text of the paper with
-your own. The file
-\verb+nips2013.rtf+ is provided as a shell for MS Word users.
+"Image classification refers to the task of extracting information classes from a multiband raster image". And CIFAR-10 is an established dataset consisting of 60000 32$\times$32 color images in 10 classes used for the purpose of studying Image classification. 
 
-The formatting instructions contained in these style files are summarized in
-sections \ref{gen_inst}, \ref{headings}, and \ref{others} below.
+\subsubsection{Related Work}
+
+Kernel SVM has proven to be effective in the image classification field\cite{chapelle1999support} and was the go-to method before Convolutional Neural Network (CNN) exhibited its great power.
+
+In recent years, Convolutional Neutral Network achieved great performance in image classification. Some recent implementations of Convolutional Neural Network have achieved state-of-the-art performance on the CIFAR-10 images, which are our target dataset. These works include a most recent model in Torch\cite{torch}, a 92.45\% accuracy. The Deeply Supervised Networks\cite{lee2014deeply}, by introducing a "companion" objective functions at each individual hidden layer they achieved an accuracy of 91.78\%. The Network in Network\cite{minlin2014network}, in which the authors built micro neural networks to abstract the data within the receptive field and obtained a 91.2\% accuracy.
 
 
 \section{Method}
-\label{gen_inst}
 
-Detailed and precise description of method. This should be complete with equations, optimization procedure, and how you plan on evaluating your method\cite{wiki}
+\subsection{Feature Engineering}
+
+We used VLFeat to extract the Histogram of Oriented Gradient (HoG) of images, and use them as the features. HoG summarizes the magnitude of gradients along different directions at different positions of a image, which can reflect color and brightness changes.
+
+\subsection{Data Preprocessing}
+In order to prevent over-fitting and improve the training efficiency, we applied PCA to the extracted HoG data. Before PCA, there were 2304 feature dimensions. After PCA, we preserved the first 700 components for the Neural Network, which can explain 98\% of the variance; and 900 for SVM, which can explain more than 99\%.
+
+\subsection{SVM}
+
+\subsubsection{Training}
+
+Since there 10 classes of images, we adopted the 1 vs all strategy, i.e. training 10 classifiers based on the 10 labels we have.
+
+We trained each classifier by maximizing the following dual problem of the objective function of SVM
+\begin{equation}
+W(\alpha)=\sum_{i=1}^{N}\alpha_{i}-\frac{1}{2}\sum_{i,j=1}^{N}\alpha_{i}\alpha_{j}y_{i}y_{j}K(\mathbf{x_{i}},\mathbf{x_{j}})
+\end{equation}
+\begin{equation}
+0<\alpha_{i}<C
+\end{equation}
+,where $\mathbf{x_{i}}$ is the feature vector of a training sample after HoG and PCA, $y_{i}=1$ or $-1$ indicating whether $\mathbf{x_{i}}$ belongs to that class, $K(\mathbf{x_{i}},\mathbf{x_{j}})$ is the kernel trick. And we used the Gaussian Kernel as the kernel function
+\begin{equation}
+K(\mathbf{x_{1}},\mathbf{x_{2}})=e^{-\frac{||\mathbf{x_{1}}-\mathbf{x_{2}}||^{2}_{2}}{2\sigma^{2}}}
+\end{equation}
+
+We used quadprog() in Matlab to find the $\mathbf{\alpha}$ that maximizes function (1), then compute the bias as
+\begin{equation}
+b=\frac{\sum_{i=1}^{N}\alpha_{i}y_{i}}{\#~of~\alpha_{i}\neq{0}}
+\end{equation}
+
+\subsubsection{Predicting}
+
+We predicted the class $c$ for new samples based on
+\begin{equation}
+c=\arg\max_{c}\sum_{i=1}^{N}\alpha_{i,c}y_{i,c}K(\mathbf{x_{i}},\mathbf{x_{new}})+b_{c}
+\end{equation}
+
+\subsubsection{Future Plan}
+Next, we plan to experiment with different kernel functions, e.g. $\chi^{2}$ RBF, Laplacian RBF, because the HoG features we're using are discrete. C should be further tuned, too, because we observed that it's somewhat over-fitted the training set, i.e. it achieved 100\% accuracy on the training set, while only 60\% on the Autolab test set.
+
+Yet another more sophisticated thing to try is to combine Neural Network with SVM, i.e. to substitute the output layer with SVM. The intuition behind this is that Neural Network can work as a more complex feature selector extracting latent features from the images, and then feed the them into SVM.
+
+
+\subsection{Neural Network}
+We implemented the basic Neural Network. That is one input layer, one hidden layer and one output layer. Since we used 700 features, the number of input nodes was 700. After testing different number of hidden nodes, we chose a number around 50. And the number of output nodes was ten. We  used incremental mode gradient descent to train the data for prediction.${We used our model to train two different pairs of weights for submission.}$
+
+\subsubsection{Training}
+During the training process, we calculated the error for each training example at output layer as: 
+\begin{equation}
+\varepsilon_{k} = t_{k} - o_{k}
+\end{equation}
+where $o_{k}$ is the observed unit output, $t_{k}$ is the target output.
+
+To minimize error, we used RMSE as our performance function:
+\begin{equation}
+RMSE = \sqrt{\frac{1}{n}\sum_{k=1}^{n}\varepsilon_{k}^2}
+\end{equation}
+And we would stop iteration once the change rate of RMSE dropped to a threshold.
+
+\subsubsection{Predicting}
+We predicted the class of test data with:
+\begin{equation}
+y=\arg\max_{c}o_{c}
+\end{equation}
+where $o_{c}$ is the output for class c.
+
+\subsubsection{Future Plan}
+In the next phase, we will implement Batch mode Gradient Descent and compare the performance of Batch mode and Incremental mode. As to over-fitting problem, we will implement some other regularization methods to see if better performance will be achieved.
+
+After that we will try to build a more advanced Neural Network model. Maybe we will challenge ourselves with Convolutional Neural Network.
+
+\subsection{Evaluation}
+
+We evaluated our classifier by accuracy on the validation set and the test set on Autolab. And when training Neutral Network, we evaluated the model we trained by the RMSE on the training set.
+
+We also leveraged validation to select the optimal hyperparameters as described in section \ref{experiments}, Experiments and Results.
 
 \section{Experiments and results}
-\label{headings}
+\label{experiments}
 
-First level headings are lower case (except for first word and proper nouns),
-flush left, bold and in point size 12. One line space before the first level
-heading and 1/2~line space after the first level heading.
+\subsection{SVM}
 
-\subsection{Experiments}
+\subsubsection{Linear SVM vs Kernel SVM}
+We experimented with both Linear SVM and Kernel SVM, and it turned out that Linear SVM achieved best accuracy of 53\% on the validation set, whereas Kernel SVM achieved 61.8\%.
 
-Second level headings are lower case (except for first word and proper nouns),
-flush left, bold and in point size 10. One line space before the second level
-heading and 1/2~line space after the second level heading.
+\subsubsection{Hyperparameter Selection}
 
-\subsubsection{Headings: third level}
+There are two hyperparameters for Gaussian Kernel SVM, namely $C$ and $\sigma$. We selected these hyperparameters by validation. We separated the 5,000 samples in the training set into one training set of 4,000 samples and one validation set of 1,000 samples.
 
-\subsection{Results}
+We selected $\sigma$ and $C$ based on the accuracy on the validation set, as shown in Figure \ref{figure1} for $\sigma$ and Figure \ref{figure2} for $C$. 
 
-\subsubsection{Headings: third level}
+The final $\sigma$ and $C$ we selected were 1.9 and 100, which achieved 61.8\% accuracy on the validation set.
 
-Third level headings are lower case (except for first word and proper nouns),
-flush left, bold and in point size 10. One line space before the third level
-heading and 1/2~line space after the third level heading.
+\subsubsection{Autolab submission}
+Our Kernel SVM classifier achieved 60\% accuracy on Autolab test set.
 
-\section{Conclusion}
-\label{others}
-
-These instructions apply to everyone, regardless of the formatter being used.
-
-\subsection{Citations within the text}
-
-Citations within the text should be numbered consecutively. The corresponding
-number is to appear enclosed in square brackets, such as [1] or [2]-[5]. The
-corresponding references are to be listed in the same order at the end of the
-paper, in the \textbf{References} section. (Note: the standard
-\textsc{Bib\TeX} style \texttt{unsrt} produces this.) As to the format of the
-references themselves, any style is acceptable as long as it is used
-consistently.
-
-As submission is double blind, refer to your own published work in the 
-third person. That is, use ``In the previous work of Jones et al.\ [4]'',
-not ``In our previous work [4]''. If you cite your other papers that
-are not widely available (e.g.\ a journal paper under review), use
-anonymous author names in the citation, e.g.\ an author of the
-form ``A.\ Anonymous''. 
-
-
-\subsection{Footnotes}
-
-Indicate footnotes with a number\footnote{Sample of the first footnote} in the
-text. Place the footnotes at the bottom of the page on which they appear.
-Precede the footnote with a horizontal rule of 2~inches
-(12~picas).\footnote{Sample of the second footnote}
-
-\subsection{Figures}
-
-All artwork must be neat, clean, and legible. Lines should be dark
-enough for purposes of reproduction; art work should not be
-hand-drawn. The figure number and caption always appear after the
-figure. Place one line space before the figure caption, and one line
-space after the figure. The figure caption is lower case (except for
-first word and proper nouns); figures are numbered consecutively.
-
-Make sure the figure caption does not get separated from the figure.
-Leave sufficient space to avoid splitting the figure and figure caption.
-
-You may use color figures. 
-However, it is best for the
-figure captions and the paper body to make sense if the paper is printed
-either in black/white or in color.
-\begin{figure}[h]
-\begin{center}
-%\framebox[4.0in]{$\;$}
-\fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
-\end{center}
-\caption{Sample figure caption.}
+\begin{figure}[ht!]
+	\centering
+	\includegraphics[width=90mm]{sigma.jpg}
+	\caption{Validation set accuracy under different sigma\label{figure1}}
 \end{figure}
 
-\subsection{Tables}
+\begin{figure}[ht!]
+	\centering
+	\includegraphics[width=90mm]{C.jpg}
+	\caption{Validation set accuracy under different C\label{figure2}}
+\end{figure}
 
-All tables must be centered, neat, clean and legible. Do not use hand-drawn
-tables. The table number and title always appear before the table. See
-Table~\ref{sample-table}.
+\subsection{Neural Network}
+We trained two models using different loss functions. In both training processes we first initialized the weights vectors $\mathbf{w}$, which was the weight vector between input layer and hidden layer, and $\mathbf{u}$, the weight vector between hidden layer and output layer with random number $\sim$ $N$(0, $D$), where $D$ is the size of training set. 
+\subsubsection{Basic Neural Network}
+In the first model, we set a fixed learning rate at:
+\begin{equation}
+\eta = 2
+\end{equation}
+We used the 4000 samples to train. Once the change rate of RMSE was less than 0.0005, we would stop the iteration. 
 
-Place one line space before the table title, one line space after the table
-title, and one line space after the table. The table title must be lower case
-(except for first word and proper nouns); tables are numbered consecutively.
+\subsubsection{Regularized Neural Network}
+In the second model, we added two bias vectors $\mathbf{b1}$ and  $\mathbf{b2}$ with initial values from [-0.5, 0.5], and updated these two vectors together with weight vectors. 
 
-\begin{table}[t]
-\caption{Sample table title}
-\label{sample-table}
-\begin{center}
-\begin{tabular}{ll}
-\multicolumn{1}{c}{\bf PART}  &\multicolumn{1}{c}{\bf DESCRIPTION}
-\\ \hline \\
-Dendrite         &Input terminal \\
-Axon             &Output terminal \\
-Soma             &Cell body (contains cell nucleus) \\
-\end{tabular}
-\end{center}
-\end{table}
+This time, we set the learning rate at:
+\begin{equation}
+\eta = \frac{2}{\sqrt{m}},
+\end{equation}
+where m is the current number of epoch. 
 
-\section{Overall quality of writing}
-Do not change any aspects of the formatting parameters in the style files.
-In particular, do not modify the width or length of the rectangle the text
-should fit into, and do not change font sizes (except perhaps in the
-\textbf{References} section; see below). Please note that pages should be
-numbered.
+To avoid over-fitting, we regularized using Simple Weight Decay:
+\begin{equation}
+\mathbf{w}\rightarrow\mathbf{w_0}-\frac{\eta\lambda}{n}
+\end{equation}
+where $\mathbf{w_0}$ is the weight vector before regularization.
 
-\section{Preparing PostScript or PDF files}
+After some trials, we set the parameters and trained the model with all the 5000 samples.
 
-Please prepare PostScript or PDF files with paper size ``US Letter'', and
-not, for example, ``A4''. The -t
-letter option on dvips will produce US Letter files.
-
-Fonts were the main cause of problems in the past years. Your PDF file must
-only contain Type 1 or Embedded TrueType fonts. Here are a few instructions
-to achieve this.
-
-\begin{itemize}
-
-\item You can check which fonts a PDF files uses.  In Acrobat Reader,
-select the menu Files$>$Document Properties$>$Fonts and select Show All Fonts. You can
-also use the program \verb+pdffonts+ which comes with \verb+xpdf+ and is
-available out-of-the-box on most Linux machines.
-
-\item The IEEE has recommendations for generating PDF files whose fonts
-are also acceptable for NIPS. Please see
-\url{http://www.emfield.org/icuwb2010/downloads/IEEE-PDF-SpecV32.pdf}
-
-\item LaTeX users:
-
-\begin{itemize}
-
-\item Consider directly generating PDF files using \verb+pdflatex+
-(especially if you are a MiKTeX user). 
-PDF figures must be substituted for EPS figures, however.
-
-\item Otherwise, please generate your PostScript and PDF files with the following commands:
-\begin{verbatim} 
-dvips mypaper.dvi -t letter -Ppdf -G0 -o mypaper.ps
-ps2pdf mypaper.ps mypaper.pdf
-\end{verbatim}
-
-Check that the PDF files only contains Type 1 fonts. 
-%For the final version, please send us both the Postscript file and
-%the PDF file. 
-
-\item xfig "patterned" shapes are implemented with 
-bitmap fonts.  Use "solid" shapes instead. 
-\item The \verb+\bbold+ package almost always uses bitmap
-fonts.  You can try the equivalent AMS Fonts with command
-\begin{verbatim}
-\usepackage[psamsfonts]{amssymb}
-\end{verbatim}
- or use the following workaround for reals, natural and complex: 
-\begin{verbatim}
-\newcommand{\RR}{I\!\!R} %real numbers
-\newcommand{\Nat}{I\!\!N} %natural numbers 
-\newcommand{\CC}{I\!\!\!\!C} %complex numbers
-\end{verbatim}
-
-\item Sometimes the problematic fonts are used in figures
-included in LaTeX files. The ghostscript program \verb+eps2eps+ is the simplest
-way to clean such figures. For black and white figures, slightly better
-results can be achieved with program \verb+potrace+.
-\end{itemize}
-\item MSWord and Windows users (via PDF file):
-\begin{itemize}
-\item Install the Microsoft Save as PDF Office 2007 Add-in from
-\url{http://www.microsoft.com/downloads/details.aspx?displaylang=en\&familyid=4d951911-3e7e-4ae6-b059-a2e79ed87041}
-\item Select ``Save or Publish to PDF'' from the Office or File menu
-\end{itemize}
-\item MSWord and Mac OS X users (via PDF file):
-\begin{itemize}
-\item From the print menu, click the PDF drop-down box, and select ``Save
-as PDF...''
-\end{itemize}
-\item MSWord and Windows users (via PS file):
-\begin{itemize}
-\item To create a new printer
-on your computer, install the AdobePS printer driver and the Adobe Distiller PPD file from
-\url{http://www.adobe.com/support/downloads/detail.jsp?ftpID=204} {\it Note:} You must reboot your PC after installing the
-AdobePS driver for it to take effect.
-\item To produce the ps file, select ``Print'' from the MS app, choose
-the installed AdobePS printer, click on ``Properties'', click on ``Advanced.''
-\item Set ``TrueType Font'' to be ``Download as Softfont''
-\item Open the ``PostScript Options'' folder
-\item Select ``PostScript Output Option'' to be ``Optimize for Portability''
-\item Select ``TrueType Font Download Option'' to be ``Outline''
-\item Select ``Send PostScript Error Handler'' to be ``No''
-\item Click ``OK'' three times, print your file.
-\item Now, use Adobe Acrobat Distiller or ps2pdf to create a PDF file from
-the PS file. In Acrobat, check the option ``Embed all fonts'' if
-applicable.
-\end{itemize}
-
-\end{itemize}
-If your file contains Type 3 fonts or non embedded TrueType fonts, we will
-ask you to fix it. 
-
-\subsection{Margins in LaTeX}
- 
-Most of the margin problems come from figures positioned by hand using
-\verb+\special+ or other commands. We suggest using the command
-\verb+\includegraphics+
-from the graphicx package. Always specify the figure width as a multiple of
-the line width as in the example below using .eps graphics
-\begin{verbatim}
-   \usepackage[dvips]{graphicx} ... 
-   \includegraphics[width=0.8\linewidth]{myfile.eps} 
-\end{verbatim}
-or % Apr 2009 addition
-\begin{verbatim}
-   \usepackage[pdftex]{graphicx} ... 
-   \includegraphics[width=0.8\linewidth]{myfile.pdf} 
-\end{verbatim}
-for .pdf graphics. 
-See section 4.4 in the graphics bundle documentation (\url{http://www.ctan.org/tex-archive/macros/latex/required/graphics/grfguide.ps}) 
- 
-A number of width problems arise when LaTeX cannot properly hyphenate a
-line. Please give LaTeX hyphenation hints using the \verb+\-+ command.
+\subsubsection{Results: Basic Neural Network}
+The highest accuracy on local machine was 54.1\%. We submitted a model of 52.8\% on Autolab and the result was 48.4\%.
+\subsubsection{Results: Regularized Neural Network}
+The accuracy on training data before regularization was around 90\%, but decreased to around 78\% after regularization. And the test result on Autolab was 50\%.
 
 
-\subsubsection*{Acknowledgments}
 
-Use unnumbered third level headings for the acknowledgments. All
-acknowledgments go at the end of the paper. Do not include 
-acknowledgments in the anonymized submission, only in the 
-final paper. 
+\section{Conclusion}
+Although we just implemented relatively simple models of Kernel SVM and Neural Network, they perform pretty well on this task. We think this is because they're both non-linear classifiers. However, this tends to lead to over-fitting, as we observed in Neural Network, and a little bit in SVM. After tuning they should perform better.
+
+We still plan to try Logistic Regression or Bayesian Network.
 
 
 

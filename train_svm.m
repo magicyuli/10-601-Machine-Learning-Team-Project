@@ -1,9 +1,12 @@
-function [ Model ] = train_svm( X, Y )
+function [ Model, acc ] = train_svm( X, Y, train_data, train_label )
 % HYPER PARAMS: C, k(x,y).
-
+    
     KERNELIZED = true;
     TRANI_PROPORTION = 1.0;
     CLZ_NUM = 10;
+    PCA_NUM = 169;
+    
+    Y = double(Y);
 
     [N, M] = size(X);
     train_size = N * TRANI_PROPORTION;
@@ -29,9 +32,10 @@ function [ Model ] = train_svm( X, Y )
     hog = extract_hog(x_train);
     
     %PCA
-%     [coeff,score] = pca(hog, 'Algorithm', 'eig', 'NumComponents', 900);
-    [coeff,score] = pca_wairi(hog, 900);
+    [coeff,score] = pca_wairi(hog, PCA_NUM);
     hog = score;
+    
+%     hog = norm2_normalize(hog);
     
     % compute the [dot(x_i, x_j) * y_i * y_j] matrix (n by n)
     H = zeros(train_size, train_size, CLZ_NUM);
@@ -57,9 +61,10 @@ function [ Model ] = train_svm( X, Y )
     % init biase
     b = zeros(1, CLZ_NUM);
     
-    min_c = 100;
-    max_c = 100;
-    for c = min_c:max_c
+    min_c = 0.0022;
+    max_c = 0.0022;
+    step_sz = 0.0001;
+    for c = min_c:step_sz:max_c
         ub = c * ones(train_size, 1);
         for  i = 1:CLZ_NUM
             fprintf('clz %d\n', i);
@@ -71,12 +76,22 @@ function [ Model ] = train_svm( X, Y )
             % cross-validation
             y_pre = predict_svm(m, x_val);
             accu = sum(y_val == y_pre) / size(y_pre, 1);
-            fprintf('c: %d, accuracy: %f\n', c, accu);
+            fprintf('c: %f, accuracy: %f\n', c, accu);
             if accu_max < accu
                 Model = m;
             end
         else
+            acc = 0;
             Model = m;
+            y=classify(Model, train_data(0001:1000,:));acc = acc + sum(y==train_label(0001:1000,:))/1000;
+            y=classify(Model, train_data(1001:2000,:));acc = acc + sum(y==train_label(1001:2000,:))/1000;
+%             y=classify(Model, train_data(2001:3000,:));acc = acc + sum(y==train_label(2001:3000,:))/1000;
+            y=classify(Model, train_data(3001:4000,:));acc = acc + sum(y==train_label(3001:4000,:))/1000;
+            y=classify(Model, train_data(4001:5000,:));acc = acc + sum(y==train_label(4001:5000,:))/1000;
+            fprintf('c: %f, acc: %f\n', c, acc / 4);
+%             plot(c, acc / 4, '*');
+            acc = acc / 4;
+%             fprintf('pca: %d, acc: %f\n', np, acc);
         end
     end
 

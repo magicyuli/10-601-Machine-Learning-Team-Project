@@ -9,6 +9,8 @@ function [ Y ] = predict_svm( model, X )
     test_score = bsxfun(@minus, hog, mean(hog, 1)) * model.coeff;
     hog = test_score;
     
+%     hog = norm2_normalize(hog);
+    
     % p = sigma(dot(x_i, x_new)) (n by k)
     if KERNELIZED
         p = kernel(model.X, hog);
