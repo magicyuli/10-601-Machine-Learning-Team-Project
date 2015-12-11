@@ -3,12 +3,24 @@ function [ Model, acc ] = train_svm( X, Y, train_data, train_label )
     
     KERNELIZED = true;
     TRANI_PROPORTION = 1.0;
+    ARTIFICIAL_PROP = 0.4;
     CLZ_NUM = 10;
-    PCA_NUM = 169;
+    PCA_NUM = 200;
+    
+    options = optimoptions('quadprog', 'TolCon', 1e-8, ...
+        'TolFun', 1e-8, 'MaxIter', 1000);
     
     Y = double(Y);
 
     [N, M] = size(X);
+    
+    % make more samples
+    art_x = augment(X(1:N * ARTIFICIAL_PROP, :));
+    art_y = Y(1:N * ARTIFICIAL_PROP, :);
+    X = [X;art_x];
+    Y = [Y;art_y];
+    N = (1 + ARTIFICIAL_PROP) * N;
+    
     train_size = N * TRANI_PROPORTION;
     
     % only 1 and -1
@@ -68,7 +80,7 @@ function [ Model, acc ] = train_svm( X, Y, train_data, train_label )
         ub = c * ones(train_size, 1);
         for  i = 1:CLZ_NUM
             fprintf('clz %d\n', i);
-            a(:, i) = quadprog(H(:, :, i), f, [], [], [], [], lb, ub);
+            a(:, i) = quadprog(H(:, :, i), f, [], [], [], [], lb, ub, [], options);
             b(i) = sum(a(:, i) .* y_train(:, i)) / sum(a(:, i) > 0);
         end
         m = struct('a', a, 'b', b, 'X', hog, 'Y', y_train, 'coeff', coeff);
