@@ -20,7 +20,9 @@ figure; hold on;
 prevRMSE = 0;
 delta = 1;
 iter = 0;
-while abs(delta) > 0.0005
+while abs(delta) > 0.0001
+    B1=0;
+    B2=0;
     iter = iter + 1;
     curRMSE = 0;    
     % Iterate through all examples
@@ -47,14 +49,12 @@ while abs(delta) > 0.0005
         
         B2 = B2 + eta.*delta_i;
         B1 = B1 + eta.*delta_j;
-        
-        curRMSE = curRMSE + norm(D - sigmoid(U * sigmoid(W * I + B1) + B2), 2);        
+        curRMSE = curRMSE + sumsqr(D - sigmoid(U * sigmoid(W * I + B1) + B2));        
     end
     disp(curRMSE);
     delta = (curRMSE - prevRMSE) / prevRMSE;
     prevRMSE = curRMSE;
-    y = curRMSE / n;
+    y = sqrt(curRMSE / n);
     plot(iter, y, '*');
 end
 end
-
