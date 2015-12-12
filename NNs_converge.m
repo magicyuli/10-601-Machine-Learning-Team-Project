@@ -1,76 +1,106 @@
-function [U, W, B1, B2] = NNs_converge(X, Y, nodes, lamda)
-% Initialize matrices with random weights 0-1
-n = size(X, 1);
-classes = size(Y, 2);
-W = normrnd(0, 1 / n, nodes, size(X, 2));
-U = normrnd(0, 1 / n, classes, nodes);
-%bias for input to Hidden
+function [w2, w1, b1, b2] = NNs_converge(X, Y, nodes, lamda)
+%     ACTIVATION_TYPE = 'ReLU';
+    ACTIVATION_TYPE = 'SIGMOID';
+    
+    OUTPUT_ACTIVATION_TYPE = 'SIGMOID';
+%     OUTPUT_ACTIVATION_TYPE = 'SOFTMAX';
+    
+    ERROR_TYPE = 'SQUARE';
+%     ERROR_TYPE = 'CROSS_ENTROPY';
+%     ERROR_TYPE = 'NEGATIVE_LOG_LIKELIHOOD';
+    
+    BATCH_SIZE = 10;
 
-B1 = rand(nodes, 1) - 0.5;
-%bias for hidden to output
-B2 = rand(classes, 1) - 0.5;
+    % Initialize matrices with random weights 0-1
+    n = size(X, 1);
+    classes = size(Y, 2);
+    
+    w1 = normrnd(0, 1 / n, nodes, size(X, 2));
+    w2 = normrnd(0, 1 / n, classes, nodes);
+    b1 = normrnd(0, 1 / n, nodes, 1);
+    b2 = normrnd(0, 1 / n, classes, 1);
 
-figure; hold on; 
-prevRMSE = 0;
-delta = 1;
-iter = 0;
-batch_sz = 10;
+    figure; hold on; 
+    prev_err = 0;
+    delta = 1;
+    iter = 0;
+    epoch = 0;
+    batch_num = n / BATCH_SIZE;
 
-acc_w = zeros(nodes, size(X, 2));
-acc_u = zeros(classes, nodes);
-acc_b1 = zeros(nodes, 1);
-acc_b2 = zeros(classes, 1);
+    while abs(delta) > 1e-4
+        epoch = epoch + 1;
+        err = 0;
+        % shuffle data
+        idx = randperm(n);
+        X = X(idx, :);
+        Y = Y(idx, :);
+        for i = 1 : batch_num
+            % upate learning rate
+            iter = iter + 1;
+            eta = 2 * iter^-0.5;
+            
+            % get a mini-batch
+            head = (i - 1) * BATCH_SIZE + 1;
+            tail = i * BATCH_SIZE;
+            a1 = X(head:tail,:).';
+            y = Y(head:tail,:).';
 
-while abs(delta) > 0.0001
-    B1=0;
-    B2=0;
-    iter = iter + 1;
-    curRMSE = 0;    
-    % Iterate through all examples
-    eta = 2 * iter^-0.5;
-    % shuffle data
-    idx = randperm(n);
-    X = X(idx, :);
-    Y = Y(idx, :);
-    for i = 1 : n
-        % Input data from current example set
-        I = X(i,:).';
-        D = Y(i,:).';
+            % ---------------Forward--------------- %
+            z2 = bsxfun(@plus, w1 * a1, b1);
+            a2 = activate(z2, ACTIVATION_TYPE);
+            z3 = bsxfun(@plus, w2 * a2, b2);
+            a3 = activate(z3, OUTPUT_ACTIVATION_TYPE);
 
-        % Propagate the signals through network
-        H = sigmoid(W * I + B1);
-        O = sigmoid(U * H + B2);
+            % ---------------Backward--------------- %
+            % Compute delta's
+            switch OUTPUT_ACTIVATION_TYPE
+                case 'SIGMOID'
+                    delta_3 = a3 .* (1 - a3) .* (a3 - y);
+                case 'SOFTMAX'
+                    delta_3 = a3 - y;
+            end
+            
+            switch ACTIVATION_TYPE
+                case 'SIGMOID'
+                    delta_2 = a2 .* (1 - a2) .* (w2.' * delta_3);
+                case 'ReLU'
+                    delta_2 = double(z2 > 0) .* (w2.' * delta_3);
+            end
+            
+            % ---------------Update Weights--------------- %
+            % Adjust weights in matrices sequentially
+            w2 = w2 - eta .* (delta_3 * (a2.') + lamda * w2 / n);
+            w1 = w1 - eta .* (delta_2 * (a1.') + lamda * w1 / n);
+            b2 = b2 - eta .* (sum(delta_3, 2) + lamda * b2 / n);
+            b1 = b1 - eta .* (sum(delta_2, 2) + lamda * b1 / n);
 
-        % Output layer error
-        delta_i = O .* (1 - O) .* (D - O);
-
-        % Calculate error for each node in layer_(n-1)
-        delta_j = H .* (1 - H) .* (U.' * delta_i);
-
-        % Adjust weights in matrices sequentially
-        acc_u = acc_u + eta .* delta_i * (H.');
-        acc_w = acc_w + eta .* delta_j * (I.');
-        acc_b1 = acc_b1 + eta .* delta_j;
-        acc_b2 = acc_b2 + eta .* delta_i;
-        
-        curRMSE = curRMSE + sumsqr(D - sigmoid(U * sigmoid(W * I + B1) + B2));        
-        
-        if mod(n, batch_sz) == 0
-            U = U + acc_u + eta * lamda * U / n;
-            W = W + acc_w + eta * lamda * W / n;
-            B1 = B1 + acc_b1 + eta * lamda * B1 / n;
-            B2 = B2 + acc_b2 + eta * lamda * B2 / n;
-            acc_w = zeros(nodes, size(X, 2));
-            acc_u = zeros(classes, nodes);
-            acc_b1 = zeros(nodes, 1);
-            acc_b2 = zeros(classes, 1);
+            % ---------------Compute Error--------------- %
+            switch ERROR_TYPE
+                case 'CROSS_ENTROPY'
+                    err = err - sum(sum(y .* log(a3) + (1 - y) .* log(1 - a3)));
+                case 'NEGATIVE_LOG_LIKELIHOOD'
+                    err = err - sum(sum(y .* log(a3)));
+                case 'SQUARE'
+                    err = err + 0.5 * sumsqr(y - a3);
+            end
         end
-        
+        err = err / n;
+        fprintf('epoch: %d, error: %f\n', epoch, err);
+        if prev_err > 0
+            delta = (err - prev_err) / prev_err;
+        end
+        prev_err = err;
+        plot(epoch, err, '*');
     end
-    disp(curRMSE);
-    delta = (curRMSE - prevRMSE) / prevRMSE;
-    prevRMSE = curRMSE;
-    y = sqrt(curRMSE / n);
-    plot(iter, y, '*');
 end
+
+function [ a ] = activate( z, type )
+    switch type
+        case 'SIGMOID'
+            a = sigmoid(z);
+        case 'ReLU'
+            a = max(0, z);
+        otherwise
+            a = z;
+    end
 end
