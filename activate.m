@@ -1,4 +1,5 @@
 function [ a ] = activate( z, type )
+% Activation function for neural network
     switch type
         case 'SIGMOID'
             a = sigmoid(z);
@@ -7,7 +8,7 @@ function [ a ] = activate( z, type )
         case 'SOFTMAX'
             a = softmax(z);
         otherwise
-            a = z;
+            error('Unexpected activation type. Exiting.');
     end
 end
 

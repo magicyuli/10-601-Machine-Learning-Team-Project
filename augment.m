@@ -1,6 +1,7 @@
-function [ aug ] = augment( X )
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+function [ X, Y ] = augment( X, Y )
+% Return the augmentation set for X
+    % The augmentation is done by flipping the images
+    
     VEC_SIZE = 32 * 32 * 3;
 
     aug = zeros(size(X));
@@ -9,5 +10,7 @@ function [ aug ] = augment( X )
         aug_img = flip(img, 1);
         aug(i, :) = reshape(aug_img, 1, VEC_SIZE);
     end
+    X = [X; aug];
+    Y = [Y; Y];
 end
 

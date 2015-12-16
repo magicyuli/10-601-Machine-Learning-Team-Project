@@ -1,27 +1,26 @@
-function [ Y ] = predict_svm( model, X )
-   KERNELIZED = true;
-    % K: number of test samples
+function [ Y ] = predict_svm( Model, X )
+    KERNELIZED = true;
+    
+    % number of test samples
     K = size(X, 1);
     
+    % hog
     hog = extract_hog(X, 'dala');
-    
-    %PCA
-    test_score = bsxfun(@minus, hog, mean(hog, 1)) * model.coeff;
+    % pca
+    test_score = bsxfun(@minus, hog, mean(hog, 1)) * Model.coeff;
     hog = test_score;
     
-%     hog = norm2_normalize(hog);
-    
-    % p = sigma(dot(x_i, x_new)) (n by k)
+    % sum(dot(x_i, x_new)) (n by k)
     if KERNELIZED
-        p = kernel(model.X, hog);
+        A = kernel(Model.X, hog);
     else
-        p = model.X * hog';
+        A = Model.X * hog';
     end
 
-    % h = [a_1 * y_1, a_2 * y_2, ...]' (n by CLZ_NUM)
-    h = model.a .* model.Y;
+    % [a_1 * y_1, a_2 * y_2, ...]' (n by CLZ_NUM)
+    H = Model.a .* Model.Y;
     % Y = sigma(a_i * y_i * dot(x_i, x_new)) + b (k by CLZ_NUM)
-    [~, Y] = max((p)' * (h) + repmat(model.b, K, 1), [], 2);
+    [~, Y] = max((A)' * (H) + repmat(Model.b, K, 1), [], 2);
     Y = Y - 1;
 end
 

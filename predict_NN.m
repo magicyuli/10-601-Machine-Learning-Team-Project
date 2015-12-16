@@ -1,5 +1,7 @@
-function [indices] = predict_NN(Model, X)
+function [ indices ] = predict_NN( Model, X )
+    % hog
     test_hog = extract_hog(X, 'dala');
+    % pca
     test_hog = bsxfun(@minus, test_hog, mean(test_hog, 1)) * Model.Evec;
     test_hog = test_hog';
     
@@ -7,6 +9,7 @@ function [indices] = predict_NN(Model, X)
     OUTPUT_ACTIVATION_TYPE = Model.M(1).out_act_t;
     n_layers = Model.M(1).n_layers;
 
+    % forward propagation
     act = test_hog;
     for l = 1:n_layers - 1
         z = bsxfun(@plus, Model.M(l).W * act, Model.M(l).B);
@@ -17,5 +20,4 @@ function [indices] = predict_NN(Model, X)
 
     [~, indices] = max(out);
     indices = (indices - 1)';
-
 end
