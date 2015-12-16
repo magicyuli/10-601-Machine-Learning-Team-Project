@@ -1,8 +1,11 @@
-function [ normed ] = normalize( data )
+function [ normed, mu, sigma ] = normalize( data )
 %NORMLIZE Summary of this function goes here
 %   Detailed explanation goes here
-normed = bsxfun(@rdivide, data, std(data, 1));
-normed = bsxfun(@minus, normed, mean(normed, 1));
+mu = mean(data, 1);
+sigma = std(data, 1);
+
+normed = bsxfun(@minus, data, mu);
+normed = bsxfun(@rdivide, normed, sigma);
 
 end
 

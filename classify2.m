@@ -1,8 +1,8 @@
-function [ y ] = classify2( model, X )
+function [ y ] = classify2( Model, X )
 %CLASSIFY2 Summary of this function goes here
 %   Detailed explanation goes here
 
-y = predict_NN(X, model);
+y = KNN(Model, X);
 
 end
 

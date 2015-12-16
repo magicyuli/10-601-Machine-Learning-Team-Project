@@ -1,12 +1,12 @@
 bst_np = 0;
 bst_acc = 0;
-for np = 102:200
+for np = 60:200
     
-    [m, acc] = train_svm(train_data(2001:3000, :), train_label(2001:3000, :), ...
-                train_data, train_label, np);
-            
-    if bst_acc < acc
-       bst_acc = acc;
+    y = classify2(Model2, data, np);
+    accu = sum(y==labels)/10000;
+    fprintf('pca: %d, acc: %f\n', np, accu);
+    if bst_acc < accu
+       bst_acc = accu;
        bst_np = np;
     end
 end

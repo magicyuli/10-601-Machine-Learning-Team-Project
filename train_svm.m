@@ -41,7 +41,7 @@ function [ Model, acc ] = train_svm( X, Y, train_data, train_label )
         y_val = Y(train_size + 1:N,:);
     end
     
-    hog = extract_hog(x_train);
+    hog = extract_hog(x_train, 'dala');
     
     %PCA
     [coeff,score] = pca_wairi(hog, PCA_NUM);
