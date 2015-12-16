@@ -1,4 +1,4 @@
-function [ idx ] = predict_LR_boost(X, Model)
+function [ indices ] = predict_LR_boost(X, Model)
 %PREDICT_LR_BOOST Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -12,13 +12,12 @@ testSize = size(X, 1);
 X = [X, ones(testSize, 1)];
 % number of classifiers
 number = size(Model.M, 3);
-idx = zeros(testSize, 1);
+p = zeros(testSize, size(Model.M, 1));
 for i = 1 : number
     proba = prob(X, Model.M(:,:,i));
-    [~, indices] = max(proba, [], 2);
-    indices = indices - 1;
-    disp(indices);
-    idx = idx + Model.Alpha(i,:) * indices;
+    p = p + Model.Alpha(i,:) * proba;
 end
+[~, indices] = max(p, [], 2);
+    indices = indices - 1;
 end
 
