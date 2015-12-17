@@ -6,7 +6,7 @@
 %\documentstyle[nips13submit_09,times,art10]{article} % For LaTeX 2.09
 %\usepackage{authblk}
 
-\title{10-601B Group Project Midway Report}
+\title{10-601B Group Project Final Report}
 
 \author{
 Liruoyang, Yu\\
@@ -39,26 +39,25 @@ This report summarizes the halfway results of the 10-601B image classification g
 \end{abstract}
 
 \section{Introduction}
-Up to this point, we trained and tested two classifiers, SVM and Neural Network. The dataset we used for training is a subset of 5000 images from CIFAR-10. We used VLFeat to extract HoG from images and then feed the extracted features to our classifiers.
+For the final submission, we trained and tested three classifiers, SVM,  Neural Network and k-NN. The dataset we used for training is a subset of 5000 images from CIFAR-10. We used VLFeat to extract HoG from images and then feed the extracted features to our classifiers.
 
-We achieved 60\% and 50\% accuracy on Autolab test using SVM and Neutral Network respectively.
+We achieved 63\%, 62.7\% and 61.4\% accuracy on Autolab test using these three classifiers respectively.
 
 \subsection{Motivation}
 
-There are three reasons why we chose SVM. First is that image data is usually not linearly separable in the original feature space, and kernel SVM can deal with this kind of dataset pretty well. Second, the training of SVM is a convex optimization problem, which made it efficient to train. Three, SVM has relatively higher resistance to over-fitting because of the maximization of the margin. And it's easy to adjust C to avoid over-fitting.
+There are three reasons why we chose SVM. First is that image data is usually not linearly separable in the original feature space, and kernel SVM can deal with this kind of dataset pretty well. Second, the training of SVM is a convex optimization problem, which made it efficient to train. Third, SVM has relatively higher resistance to over-fitting because of the maximization of the margin. And it's easy to adjust C to avoid over-fitting.
 
-On the other hand, Neural Network is a non-paramateric model and therefore, is easy to use and understand.
+The other two classification methods are both non-parametric and therefore, are easy to use and understand. Also, Neural Networks work well on recognition problems.
 
 \subsection{Background and Related Work}
-
+\subsubsection{Background}
 "Image classification refers to the task of extracting information classes from a multiband raster image". And CIFAR-10 is an established dataset consisting of 60000 32$\times$32 color images in 10 classes used for the purpose of studying Image classification. 
 
 \subsubsection{Related Work}
 
 Kernel SVM has proven to be effective in the image classification field\cite{chapelle1999support} and was the go-to method before Convolutional Neural Network (CNN) exhibited its great power.
 
-In recent years, Convolutional Neutral Network achieved great performance in image classification. Some recent implementations of Convolutional Neural Network have achieved state-of-the-art performance on the CIFAR-10 images, which are our target dataset. These works include a most recent model in Torch\cite{torch}, a 92.45\% accuracy. The Deeply Supervised Networks\cite{lee2014deeply}, by introducing a "companion" objective functions at each individual hidden layer they achieved an accuracy of 91.78\%. The Network in Network\cite{minlin2014network}, in which the authors built micro neural networks to abstract the data within the receptive field and obtained a 91.2\% accuracy.
-
+In recent years, CNN has been very successful in image classification. Some implementations of CNN have achieved state-of-the-art performance on the CIFAR-10 images, which are our target dataset. These works include a most recent model using fraction max-polling\cite{graham2014fractional}, reduced the error rate to 3.47\%. The Deeply Supervised Networks\cite{lee2014deeply}, by introducing a "companion" objective functions at each individual hidden layer they achieved an accuracy of 91.78\%. The Network in Network\cite{minlin2014network}, in which the authors built micro neural networks to abstract the data within the receptive field and obtained a 91.2\% accuracy.
 
 \section{Method}
 
@@ -67,13 +66,13 @@ In recent years, Convolutional Neutral Network achieved great performance in ima
 We used VLFeat to extract the Histogram of Oriented Gradient (HoG) of images, and use them as the features. HoG summarizes the magnitude of gradients along different directions at different positions of a image, which can reflect color and brightness changes.
 
 \subsection{Data Preprocessing}
-In order to prevent over-fitting and improve the training efficiency, we applied PCA to the extracted HoG data. Before PCA, there were 2304 feature dimensions. After PCA, we preserved the first 700 components for the Neural Network, which can explain 98\% of the variance; and 900 for SVM, which can explain more than 99\%.
+In order to prevent over-fitting and improve the training efficiency, we applied PCA to the extracted HoG data. Before PCA, there were 2304 feature dimensions. After PCA, we reserved the first 500 components for the Neural Network, which can explain 95\% of the variance, first 200 for SVM, which can explain more than 80\%, and first 143 for k-NN, which can explan approximate 74\%.
 
 \subsection{SVM}
 
 \subsubsection{Training}
 
-Since there 10 classes of images, we adopted the 1 vs all strategy, i.e. training 10 classifiers based on the 10 labels we have.
+Since there are 10 classes of images, we adopted the 1 vs all strategy, i.e. training 10 classifiers based on the 10 labels we have.
 
 We trained each classifier by maximizing the following dual problem of the objective function of SVM
 \begin{equation}
@@ -99,27 +98,26 @@ We predicted the class $c$ for new samples based on
 c=\arg\max_{c}\sum_{i=1}^{N}\alpha_{i,c}y_{i,c}K(\mathbf{x_{i}},\mathbf{x_{new}})+b_{c}
 \end{equation}
 
-\subsubsection{Future Plan}
-Next, we plan to experiment with different kernel functions, e.g. $\chi^{2}$ RBF, Laplacian RBF, because the HoG features we're using are discrete. C should be further tuned, too, because we observed that it's somewhat over-fitted the training set, i.e. it achieved 100\% accuracy on the training set, while only 60\% on the Autolab test set.
-
-Yet another more sophisticated thing to try is to combine Neural Network with SVM, i.e. to substitute the output layer with SVM. The intuition behind this is that Neural Network can work as a more complex feature selector extracting latent features from the images, and then feed the them into SVM.
-
-
 \subsection{Neural Network}
-We implemented the basic Neural Network. That is one input layer, one hidden layer and one output layer. Since we used 700 features, the number of input nodes was 700. After testing different number of hidden nodes, we chose a number around 50. And the number of output nodes was ten. We  used incremental mode gradient descent to train the data for prediction.${We used our model to train two different pairs of weights for submission.}$
+In this phase, we first implemented batch mode. Then we upgraded our basic model to a two-hidden-layered Network and compared the performance with the basic one. The boost of adding a layer was not remarkable, but the result proved incremental mode gradient descent was better. After we tested several layer numbers, we decided to use a Network with three hidden layers. Since we used 500 features, the number of input nodes was 500. And the number of nodes for the hidden layers were 150, 150, 100 respectively.
 
 \subsubsection{Training}
-During the training process, we calculated the error for each training example at output layer as: 
+During the training process, we used softmax as activation function:
 \begin{equation}
-\varepsilon_{k} = t_{k} - o_{k}
+p(c_k=1|x) =  \frac{e^{o_k}}{\sum_{j=1}^{C}e^{o_j}}
 \end{equation}
-where $o_{k}$ is the observed unit output, $t_{k}$ is the target output.
+where $o_{j}$ is the output for class j, and $o_{j}$ is in range of (0, 1) adding up to 1. C is the number of classes. 
 
-To minimize error, we used RMSE as our performance function:
+The lost function we used:
 \begin{equation}
-RMSE = \sqrt{\frac{1}{n}\sum_{k=1}^{n}\varepsilon_{k}^2}
+L(x, y; \theta) = -\sum_jy_j\log p(c_j|x)
 \end{equation}
-And we would stop iteration once the change rate of RMSE dropped to a threshold.
+
+The learning process would be minimizing the loss over the whole training set:
+\begin{equation}
+\theta^* = \arg\min_\theta\sum_{n=1}^NL(x^n, y^n; \theta)
+\end{equation}
+Where N is total number of samples in training set. And we would stop iteration once the change rate of  dropped to a threshold.
 
 \subsubsection{Predicting}
 We predicted the class of test data with:
@@ -128,17 +126,16 @@ y=\arg\max_{c}o_{c}
 \end{equation}
 where $o_{c}$ is the output for class c.
 
-\subsubsection{Future Plan}
-In the next phase, we will implement Batch mode Gradient Descent and compare the performance of Batch mode and Incremental mode. As to over-fitting problem, we will implement some other regularization methods to see if better performance will be achieved.
+\subsection{k-NN}
+\subsubsection{Training}
 
-After that we will try to build a more advanced Neural Network model. Maybe we will challenge ourselves with Convolutional Neural Network.
+\subsubsection{Predicting}
 
 \subsection{Evaluation}
 
 We evaluated our classifier by accuracy on the validation set and the test set on Autolab. And when training Neutral Network, we evaluated the model we trained by the RMSE on the training set.
 
 We also leveraged validation to select the optimal hyperparameters as described in section \ref{experiments}, Experiments and Results.
-
 \section{Experiments and results}
 \label{experiments}
 
@@ -171,7 +168,7 @@ Our Kernel SVM classifier achieved 60\% accuracy on Autolab test set.
 \end{figure}
 
 \subsection{Neural Network}
-We trained two models using different loss functions. In both training processes we first initialized the weights vectors $\mathbf{w}$, which was the weight vector between input layer and hidden layer, and $\mathbf{u}$, the weight vector between hidden layer and output layer with random number $\sim$ $N$(0, $D$), where $D$ is the size of training set. 
+Besides the models we introduced in the mid-way report, we tried other techniques and regularization terms. In both training processes we first initialized the weights vectors $\mathbf{w_i}$, which was the weight vector between input layer and the first hidden layer and also between hidden layers, and $\mathbf{u}$, the weight vector between the last hidden layer and output layer with random number $\sim$ $N$(0, $N$), where $N$ is the size of training set. The next few subsections deal with both the models in the last phase and the new optimization we tried.
 \subsubsection{Basic Neural Network}
 In the first model, we set a fixed learning rate at:
 \begin{equation}
@@ -195,7 +192,14 @@ To avoid over-fitting, we regularized using Simple Weight Decay:
 where $\mathbf{w_0}$ is the weight vector before regularization.
 
 After some trials, we set the parameters and trained the model with all the 5000 samples.
-
+\subsection{Momentum}
+We used stochastic gradient descent with momentum to diminish the fluctuations in weight changes over consecutive iterations:
+\begin{equation}
+\theta \leftarrow \theta - \eta \Delta
+\end{equation}
+\begin{equation}
+\Delta \leftarrow 0.9 \Delta + \frac{\partial L}{\partial \theta}
+\end{equation}
 \subsubsection{Results: Basic Neural Network}
 The highest accuracy on local machine was 54.1\%. We submitted a model of 52.8\% on Autolab and the result was 48.4\%.
 \subsubsection{Results: Regularized Neural Network}
