@@ -41,7 +41,7 @@ This report summarizes the halfway results of the 10-601B image classification g
 \section{Introduction}
 For the final submission, we trained and tested three classifiers, SVM,  Neural Network and k-NN. The dataset we used for training is a subset of 5000 images from CIFAR-10. We used VLFeat to extract HoG from images and then feed the extracted features to our classifiers.
 
-We achieved 63\%, 62.7\% and 61.4\% accuracy on Autolab test using these three classifiers respectively.
+We achieved 63.0\%, 62.7\% and 61.4\% accuracy on Autolab test using these three classifiers respectively.
 
 \subsection{Motivation}
 
@@ -99,7 +99,7 @@ c=\arg\max_{c}\sum_{i=1}^{N}\alpha_{i,c}y_{i,c}K(\mathbf{x_{i}},\mathbf{x_{new}}
 \end{equation}
 
 \subsection{Neural Network}
-In this phase, we first implemented batch mode. Then we upgraded our basic model to a two-hidden-layered Network and compared the performance with the basic one. The boost of adding a layer was not remarkable, but the result proved incremental mode gradient descent was better. After we tested several layer numbers, we decided to use a Network with three hidden layers. Since we used 500 features, the number of input nodes was 500. And the number of nodes for the hidden layers were 150, 150, 100 respectively.
+In this phase, we first implemented batch mode. Then we upgraded our basic model to a two-hidden-layered Network and compared the performance with the basic one. The boost of adding a layer was not remarkable, but the result proved incremental mode gradient descent was better. After we tested several layer numbers, we decided to use a Network with three hidden layers. Since we used 500 features, the number of input nodes was 500. And the number of nodes for the hidden layers were 150, 150, 50 respectively.
 
 \subsubsection{Training}
 During the training process, we used softmax as activation function:
@@ -168,7 +168,12 @@ Our Kernel SVM classifier achieved 60\% accuracy on Autolab test set.
 \end{figure}
 
 \subsection{Neural Network}
-Besides the models we introduced in the mid-way report, we tried other techniques and regularization terms. In both training processes we first initialized the weights vectors $\mathbf{w_i}$, which was the weight vector between input layer and the first hidden layer and also between hidden layers, and $\mathbf{u}$, the weight vector between the last hidden layer and output layer with random number $\sim$ $N$(0, $N$), where $N$ is the size of training set. The next few subsections deal with both the models in the last phase and the new optimization we tried.
+Besides the models we introduced in the mid-way report, we tried other techniques to improve the performance of Neural Network. 
+
+In each training process we first initialized the weights vectors $\mathbf{w_i}$, which was the weight vector between input layer and the first hidden layer and also between hidden layers in CNN, and $\mathbf{u}$, the weight vector between the last hidden layer and output layer with random number $\sim$ $N$(0, $N$), where $N$ is the size of training set. 
+
+The next few subsections deal with both the models in the last phase and the new optimization techniques we tried.
+
 \subsubsection{Basic Neural Network}
 In the first model, we set a fixed learning rate at:
 \begin{equation}
@@ -192,20 +197,35 @@ To avoid over-fitting, we regularized using Simple Weight Decay:
 where $\mathbf{w_0}$ is the weight vector before regularization.
 
 After some trials, we set the parameters and trained the model with all the 5000 samples.
-\subsection{Momentum}
-We used stochastic gradient descent with momentum to diminish the fluctuations in weight changes over consecutive iterations:
+\subsection{Regularized Neural Network with Momentum}
+We used 5000 training data to train our old model, and used the 10000 \emph{test\underline{ }batch}  data in the CIFAR-10 batch data to test.
+The change of parameters such as number of nodes, converge condition, and regularization weight could hardly make progress. We found it necessary to upgrade the complexity of our model. We took advantage of the methods used in deep learning, i.e. increased the number of hidden layers.
+
+In general, the regularization term we used remained the same - Simple Weight Decay. Instead of using the learning rate function in the second model, we set a fixed learning rate at:
+\begin{equation}
+\eta = 0.01 
+\end{equation}
+This was a result of trial and error. And also we used a fixed number of epochs.
+In addition, we added Momentum to stochastic gradient descent to diminish the fluctuations in weight changes over consecutive iterations:
 \begin{equation}
 \theta \leftarrow \theta - \eta \Delta
 \end{equation}
 \begin{equation}
 \Delta \leftarrow 0.9 \Delta + \frac{\partial L}{\partial \theta}
 \end{equation}
+
+As to increasing the number of hidden layers, we first tried adding just one layer. There was a slight improvement in the accuracy. And the accuracy was stable. Therefore, we modified our model to take a new parameter which indicated the number of hidden layers. And we explored iteratively.
+
 \subsubsection{Results: Basic Neural Network}
-The highest accuracy on local machine was 54.1\%. We submitted a model of 52.8\% on Autolab and the result was 48.4\%.
+The highest accuracy on local machine was 54.1\%. We submitted a final model of 52.8\% on Autolab and the result was 48.4\%.
+
 \subsubsection{Results: Regularized Neural Network}
-The accuracy on training data before regularization was around 90\%, but decreased to around 78\% after regularization. And the test result on Autolab was 50\%.
+The accuracy on training data before regularization was around 90\%, but decreased to around 78\% after regularization. The accuracy on test data had a little increase, and the overfit problem was solved. And the test result on Autolab was an accuracy of 50\%.
 
+\subsubsection{Results: Regularized Neural Network with Momentum}
+The new activation function and loss function we adopted here improved the performance by about 8\% compared to the models we used before. At that time, we just had one hidden layer. As is mentioned in above subsection, we iteratively explored the number of hidden layers. The accuracy kept increasing in the first place but became not so stable as it got larger than four. Even we suffered a performance degradation after the number of hidden layers became larger than six. To maintain a relatively stable classifier, we chose three as our number of hidden layers. For the number of nodes in these three layers, we decided to use  150, 150 and 50 respectively. 
 
+On local machine, the test result was some 64\% correctness. The submission result on Autolab was 62.7\%.
 
 \section{Conclusion}
 Although we just implemented relatively simple models of Kernel SVM and Neural Network, they perform pretty well on this task. We think this is because they're both non-linear classifiers. However, this tends to lead to over-fitting, as we observed in Neural Network, and a little bit in SVM. After tuning they should perform better.
